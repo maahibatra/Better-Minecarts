@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "betterminecarts",
-  "version": "${version}",
+  "version": "1.0-SNAPSHOT",
   "name": "BetterMinecarts",
   "description": "Minecraft doesn't see the potential that minecarts do, so I fixed them!",
   "authors": [],
@@ -21,8 +21,8 @@
     "betterminecarts.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=${loader_version}",
+    "fabricloader": ">=0.16.14",
     "fabric": "*",
-    "minecraft": "${minecraft_version}"
+    "minecraft": "1.21.8"
   }
 }
