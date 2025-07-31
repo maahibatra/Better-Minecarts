@@ -4,6 +4,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.fabricmc.loader.impl.lib.sat4j.core.Vec;
 import net.minecraft.block.RailBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -14,6 +15,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.block.Block;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.*;
@@ -96,8 +98,8 @@ public class Betterminecarts implements ModInitializer {
         });
 
         ServerTickEvents.END_WORLD_TICK.register(world -> {
-            for(Entity entity : world.iterateEntities()) {
-                if(!(entity instanceof AbstractMinecartEntity cartA)) continue; // entity iteration
+            for(Entity entity : world.iterateEntities()) { // entity iteration
+                if(!(entity instanceof AbstractMinecartEntity cartA)) continue;
 
                 // looks up linked minecarts
                 UUID uuidA = cartA.getUuid();
@@ -105,35 +107,28 @@ public class Betterminecarts implements ModInitializer {
 
                 for(UUID uuidB : linkedUuids) { // iterates over linked carts
                     Entity linked = world.getEntity(uuidB);
-                    if(linked instanceof AbstractMinecartEntity cartB) {
-                        // needed later
-                    }
-                }
+                    if (!(linked instanceof AbstractMinecartEntity cartB)) continue;
 
-                // movement tracking
-                Vec3d lastp = lastPositions.get(uuidA);
-                Vec3d currentp = cartA.getPos();
-
-                if(lastp != null && !currentp.equals(lastp) &&  lastp.squaredDistanceTo(currentp) > 0.0001) { // currentpos vs lastpos
-                    // System.out.println("[BetterMinecarts] " + uuidA + " moved from " + lastp + " to " + currentp);
-                }
-
-                // basic velocity syncing
-                if(lastPositions.containsKey(uuidA)) {
+                    // minecarts move together
+                    double dist = 1.0;
+                    Vec3d posA = cartA.getPos();
+                    Direction dirA = cartA.getMovementDirection();
                     Vec3d velA = cartA.getVelocity();
+                    Vec3d posB = cartB.getPos();
+                    Direction dirB = cartB.getMovementDirection();
+                    Vec3d velB = cartB.getVelocity();
+                    double currentDist = posA.subtract(posB).length();
 
-                    for (UUID uuidB : linkedUuids) {
-                        Entity linked = world.getEntity(uuidB);
-                        if(!(linked instanceof AbstractMinecartEntity cartB)) continue;
-
-                        double distance = cartA.getPos().distanceTo(cartB.getPos());
-                        if(distance > 1) {
+                    if(currentDist > dist) {
+                        if(velA.subtract(velB).length() > 0) {
+                            System.out.println("carts should move in direction of cartA, " + dirA);
                             cartB.setVelocity(velA);
+                        } else {
+                            System.out.println("carts should move in direction of cartB, " + dirB);
+                            cartA.setVelocity(velB);
                         }
                     }
                 }
-
-                lastPositions.put(uuidA, currentp);
             }
         });
     }
