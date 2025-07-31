@@ -33,7 +33,14 @@ public class Betterminecarts implements ModInitializer {
         Set<List<UUID>> links = new HashSet<>();
 
         UseEntityCallback.EVENT.register((playerEntity, world, hand, entity, entityHitResult) -> {
-            if(!world.isClient() && entity.getType() == EntityType.MINECART && playerEntity.getMainHandStack().getItem() == Items.CHAIN) {
+            if (!world.isClient() && entity.getType() == EntityType.MINECART) {
+                if (playerEntity.getMainHandStack().getItem() != Items.CHAIN) {
+                    playerEntity.sendMessage(Text.literal("sitting in a minecart, i see!"), false);
+                    if(entity.getPassengerList().isEmpty()) {
+                        playerEntity.startRiding(entity);
+                    }
+                    return ActionResult.SUCCESS;
+                }
 
                 BlockPos pos = entity.getBlockPos();
                 Block block = world.getBlockState(pos).getBlock();
@@ -43,7 +50,7 @@ public class Betterminecarts implements ModInitializer {
                     return ActionResult.SUCCESS;
                 }
 
-                if(map.size() == 0) {
+                if(map.isEmpty()) {
                     playerEntity.sendMessage(Text.literal("you clicked the first minecart with a chain!"), false);
                     map.put(playerEntity.getUuid(), (MinecartEntity) entity);
                 } else {
@@ -78,7 +85,7 @@ public class Betterminecarts implements ModInitializer {
                             playerEntity.getMainHandStack().decrement(1);
 
                             linkMap.computeIfAbsent(uuid1, k -> new HashSet<>()).add(uuid2);
-                            linkMap.computeIfAbsent(uuid1, k -> new HashSet<>()).add(uuid2);
+                            linkMap.computeIfAbsent(uuid2, k -> new HashSet<>()).add(uuid1);
                         }
 
                         map.remove(playerEntity.getUuid());
@@ -108,7 +115,7 @@ public class Betterminecarts implements ModInitializer {
                 Vec3d currentp = cartA.getPos();
 
                 if(lastp != null && !currentp.equals(lastp) &&  lastp.squaredDistanceTo(currentp) > 0.0001) { // currentpos vs lastpos
-                    System.out.println("[BetterMinecarts] " + uuidA + " moved from " + lastp + " to " + currentp);
+                    // System.out.println("[BetterMinecarts] " + uuidA + " moved from " + lastp + " to " + currentp);
                 }
 
                 // basic velocity syncing
