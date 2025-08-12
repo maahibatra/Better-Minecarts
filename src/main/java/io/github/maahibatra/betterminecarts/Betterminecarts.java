@@ -5,7 +5,9 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.loader.impl.lib.sat4j.core.Vec;
+import net.minecraft.block.BlockState;
 import net.minecraft.block.RailBlock;
+import net.minecraft.block.enums.RailShape;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
@@ -20,7 +22,7 @@ import net.minecraft.util.math.Vec3d;
 
 import java.util.*;
 
-// note: this is the first time i'm commenting in my code simply because i am confused by my own code the next day.
+// note: this is the first time i'm commenting in my code simply because when i fire up intellij the next day it feels like i just woke up stuck in a maze.
 
 public class Betterminecarts implements ModInitializer {
 
@@ -50,7 +52,7 @@ public class Betterminecarts implements ModInitializer {
                 if (!(block instanceof RailBlock)) {
                     playerEntity.sendMessage(Text.literal("minecart must be on rails."), false);
                     return ActionResult.SUCCESS;
-                }
+                } // make this into same railway track instead
 
                 if(map.isEmpty()) {
                     playerEntity.sendMessage(Text.literal("you clicked the first minecart with a chain!"), false);
@@ -110,22 +112,24 @@ public class Betterminecarts implements ModInitializer {
                     if (!(linked instanceof AbstractMinecartEntity cartB)) continue;
 
                     // minecarts move together
-                    double dist = 1.0;
-                    Vec3d posA = cartA.getPos();
-                    Direction dirA = cartA.getMovementDirection();
                     Vec3d velA = cartA.getVelocity();
-                    Vec3d posB = cartB.getPos();
-                    Direction dirB = cartB.getMovementDirection();
                     Vec3d velB = cartB.getVelocity();
-                    double currentDist = posA.subtract(posB).length();
 
-                    if(currentDist > dist) {
-                        if(velA.subtract(velB).length() > 0) {
-                            System.out.println("carts should move in direction of cartA, " + dirA);
+                    if(velA.subtract(velB).length() > 0.01) { // vel diff present
+                        if (velA.length() > velB.length()) {
+                            System.out.println("carts should move in direction of cartA");
                             cartB.setVelocity(velA);
+
+                            Vec3d dirA = cartA.getPos().subtract(cartB.getPos()).normalize();
+                            Vec3d posB = cartA.getPos().subtract(dirA.multiply(2.0));
+                            cartB.setPosition(posB);
                         } else {
-                            System.out.println("carts should move in direction of cartB, " + dirB);
+                            System.out.println("carts should move in direction of cartB");
                             cartA.setVelocity(velB);
+                            
+                            Vec3d dirB = cartB.getPos().subtract(cartA.getPos()).normalize();
+                            Vec3d posA = cartB.getPos().subtract(dirB.multiply(2.0));
+                            cartA.setPosition(posA);
                         }
                     }
                 }
