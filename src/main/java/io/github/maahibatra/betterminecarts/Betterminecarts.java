@@ -26,6 +26,7 @@ public class Betterminecarts implements ModInitializer {
 
     private final Map<UUID, Set<UUID>> linkMap = new HashMap<>();
     private final Map<UUID, Vec3d> lastPositions = new HashMap<>();
+    private final Map<UUID, Long> lastUpdateTimes = new HashMap<>();
 
     @Override
     public void onInitialize() {
@@ -35,7 +36,7 @@ public class Betterminecarts implements ModInitializer {
         Set<List<UUID>> links = new HashSet<>();
 
         UseEntityCallback.EVENT.register((playerEntity, world, hand, entity, entityHitResult) -> {
-            if (!world.isClient() && entity.getType() == EntityType.MINECART) {
+            if (!world.isClient() && entity instanceof AbstractMinecartEntity) {
                 if (playerEntity.getMainHandStack().getItem() != Items.CHAIN) {
                     playerEntity.sendMessage(Text.literal("sitting in a minecart, i see!"), false);
                     if(entity.getPassengerList().isEmpty()) {
@@ -47,10 +48,10 @@ public class Betterminecarts implements ModInitializer {
                 BlockPos pos = entity.getBlockPos();
                 Block block = world.getBlockState(pos).getBlock();
 
-                if (!(block instanceof RailBlock)) {
+                if (!(block instanceof AbstractRailBlock)) {
                     playerEntity.sendMessage(Text.literal("minecart must be on rails."), false);
                     return ActionResult.SUCCESS;
-                } // make this into same railway track instead
+                }
 
                 if(map.isEmpty()) {
                     playerEntity.sendMessage(Text.literal("you clicked the first minecart with a chain!"), false);
@@ -98,6 +99,7 @@ public class Betterminecarts implements ModInitializer {
         });
 
         ServerTickEvents.END_WORLD_TICK.register(world -> {
+            long currentTime = world.getServer().getTicks();
             for(Entity entity : world.iterateEntities()) { // entity iteration
                 if(!(entity instanceof AbstractMinecartEntity cartA)) continue;
 
@@ -107,44 +109,81 @@ public class Betterminecarts implements ModInitializer {
 
                 for(UUID uuidB : linkedUuids) { // iterates over linked carts
                     Entity linked = world.getEntity(uuidB);
-                    if (!(linked instanceof AbstractMinecartEntity cartB)) continue;
+                    if(!(linked instanceof AbstractMinecartEntity cartB)) continue;
 
-                    // minecarts move together
-                    Vec3d velA = cartA.getVelocity();
-                    Vec3d velB = cartB.getVelocity();
+                    // skip if we alr processed the pair this tick
+                    Long lastUpdateA = lastUpdateTimes.get(uuidA);
+                    Long lastUpdateB = lastUpdateTimes.get(uuidB);
+                    if((lastUpdateA != null && lastUpdateA == currentTime) || (lastUpdateB != null && lastUpdateB == currentTime)) continue;
+
+                    // only process if both carts are on rails
                     BlockPos posA = cartA.getBlockPos();
                     BlockPos posB = cartB.getBlockPos();
-                    BlockState blockA = world.getBlockState(posA);
-                    BlockState blockB = world.getBlockState(posB);
+                    if(!(world.getBlockState(posA).getBlock() instanceof AbstractRailBlock) || !(world.getBlockState(posB).getBlock() instanceof AbstractRailBlock)) continue;
 
-                    if(!(blockA.getBlock() instanceof AbstractRailBlock) && !(blockB.getBlock() instanceof AbstractRailBlock)) continue;
-                    if(!blockA.contains(RailBlock.SHAPE) || !(blockB.contains(RailBlock.SHAPE))) continue;
-                    RailShape shapeA = blockA.get(RailBlock.SHAPE);
-                    RailShape shapeB = blockB.get(RailBlock.SHAPE);
-                    if(shapeA == null || shapeB == null) continue;
+                    // cart moving logic from this point on
+                    Vec3d velA = cartA.getVelocity();
+                    Vec3d velB = cartB.getVelocity();
+                    Vec3d posVecA = cartA.getPos();
+                    Vec3d posVecB = cartB.getPos();
 
-//                    if(blockA.getBlock() instanceof AbstractRailBlock railA && blockB.getBlock() instanceof AbstractRailBlock railB) {
-//                        shapeA = railA.getRailDirection(blockA, world, posA, cartA);
-//                        shapeB = railB.getRailDirection(blockB, world, posB, cartB);
-//                    }
+                    // which cart is moving (faster)
+                    Vec3d lastPosA = lastPositions.get(uuidA);
+                    Vec3d lastPosB = lastPositions.get(uuidB);
+                    double speedA = velA.length();
+                    double speedB = velB.length();
+                    double diff = Math.abs(speedA - speedB);
 
-                    if(velA.subtract(velB).length() > 0.01) { // vel diff present
-                        if (velA.length() > velB.length()) {
-                            System.out.println("carts should move in direction of cartA");
-                            cartB.setVelocity(velA);
+                    if(diff > 0.01 || (lastPosA != null && posVecA.subtract(lastPosA).length() > 0.05) || (lastPosB != null && posVecA.subtract(lastPosB).length() > 0.05)) {
+                        AbstractMinecartEntity leader, follower;
+                        Vec3d leaderPos, followerPos;
 
-                            Vec3d dirA = cartA.getPos().subtract(cartB.getPos()).normalize();
-                            Vec3d offsetB = cartA.getPos().subtract(dirA.multiply(2.0));
-                            cartB.setPosition(offsetB);
-                        } else {
-                            System.out.println("carts should move in direction of cartB");
-                            cartA.setVelocity(velB);
-
-                            Vec3d dirB = cartB.getPos().subtract(cartA.getPos()).normalize();
-                            Vec3d offsetA = cartB.getPos().subtract(dirB.multiply(2.0));
-                            cartA.setPosition(offsetA);
+                        // determine leader based and movement
+                        boolean leadA = speedA > speedB + 0.01;
+                        if(diff < 0.01 && lastPosA != null && lastPosB != null) {
+                            double moveA = posVecA.subtract(lastPosA).length();
+                            double moveB = posVecB.subtract(lastPosB).length();
+                            leadA = moveA > moveB;
                         }
+
+                        if(leadA) {
+                            leader = cartA;
+                            follower = cartB;
+                            leaderPos = posVecA;
+                            followerPos = posVecB;
+                        } else {
+                            leader = cartB;
+                            follower = cartA;
+                            leaderPos = posVecB;
+                            followerPos = posVecA;
+                        }
+
+                        // calculate direction and adjust distance
+                        Vec3d dir = leaderPos.subtract(followerPos);
+                        double currDist = dir.length();
+
+                        if(Math.abs(currDist - 2.0) > 0.1) {
+                            if(currDist > 0.01) {
+                                dir = dir.normalize();
+                                Vec3d target = leaderPos.subtract(dir.multiply(2.0));
+
+                                Vec3d adjustment = target.subtract(followerPos).multiply(0.5);
+                                follower.setPosition(followerPos.add(adjustment));
+                            }
+                        }
+
+                        // sync velocities
+                        Vec3d leaderVel = leader.getVelocity();
+                        if(leaderVel.length() > 0.01) {
+                            follower.setVelocity(leaderVel);
+                        }
+
+                        lastUpdateTimes.put(uuidA, currentTime);
+                        lastUpdateTimes.put(uuidB, currentTime);
                     }
+
+                    lastPositions.put(uuidA, posVecA);
+                    lastPositions.put(uuidB, posVecB);
                 }
             }
         });
