@@ -117,16 +117,16 @@ public class Betterminecarts implements ModInitializer {
                     BlockState blockA = world.getBlockState(posA);
                     BlockState blockB = world.getBlockState(posB);
 
-                    if(!(blockA.getBlock() instanceof AbstractRailBlock || blockA.getBlock() instanceof PoweredRailBlock) && !(blockB.getBlock() instanceof AbstractRailBlock || blockB.getBlock() instanceof PoweredRailBlock)) continue;
-                    RailShape shapeA = null;
-                    RailShape shapeB = null;
-                    try {
-                        shapeA = blockA.get(RailBlock.SHAPE);
-                        shapeB = blockB.get(RailBlock.SHAPE);
-                    } catch(Exception e) {
-                        continue;
-                    }
+                    if(!(blockA.getBlock() instanceof AbstractRailBlock) && !(blockB.getBlock() instanceof AbstractRailBlock)) continue;
+                    if(!blockA.contains(RailBlock.SHAPE) || !(blockB.contains(RailBlock.SHAPE))) continue;
+                    RailShape shapeA = blockA.get(RailBlock.SHAPE);
+                    RailShape shapeB = blockB.get(RailBlock.SHAPE);
                     if(shapeA == null || shapeB == null) continue;
+
+//                    if(blockA.getBlock() instanceof AbstractRailBlock railA && blockB.getBlock() instanceof AbstractRailBlock railB) {
+//                        shapeA = railA.getRailDirection(blockA, world, posA, cartA);
+//                        shapeB = railB.getRailDirection(blockB, world, posB, cartB);
+//                    }
 
                     if(velA.subtract(velB).length() > 0.01) { // vel diff present
                         if (velA.length() > velB.length()) {
@@ -134,20 +134,6 @@ public class Betterminecarts implements ModInitializer {
                             cartB.setVelocity(velA);
 
                             Vec3d dirA = cartA.getPos().subtract(cartB.getPos()).normalize();
-//                            Vec3d dirA;
-//                            switch (shapeA) {
-//                                case NORTH_SOUTH -> dirA = new Vec3d(0, 0, 1);
-//                                case EAST_WEST -> dirA = new Vec3d(1, 0, 0);
-//                                case NORTH_EAST -> dirA = new Vec3d(1, 0, -1).normalize();
-//                                case NORTH_WEST -> dirA = new Vec3d(-1, 0, -1).normalize();
-//                                case SOUTH_EAST -> dirA = new Vec3d(1, 0, 1).normalize();
-//                                case SOUTH_WEST -> dirA = new Vec3d(-1, 0, 1).normalize();
-//                                default -> {
-//                                    System.out.println("unhandled rail shape");
-//                                    return;
-//                                }
-//                            }
-
                             Vec3d offsetB = cartA.getPos().subtract(dirA.multiply(2.0));
                             cartB.setPosition(offsetB);
                         } else {
@@ -155,20 +141,6 @@ public class Betterminecarts implements ModInitializer {
                             cartA.setVelocity(velB);
 
                             Vec3d dirB = cartB.getPos().subtract(cartA.getPos()).normalize();
-//                            Vec3d dirB;
-//                            switch (shapeB) {
-//                                case NORTH_SOUTH -> dirB = new Vec3d(0, 0, 1);
-//                                case EAST_WEST -> dirB = new Vec3d(1, 0, 0);
-//                                case NORTH_EAST -> dirB = new Vec3d(1, 0, -1).normalize();
-//                                case NORTH_WEST -> dirB = new Vec3d(-1, 0, -1).normalize();
-//                                case SOUTH_EAST -> dirB = new Vec3d(1, 0, 1).normalize();
-//                                case SOUTH_WEST -> dirB = new Vec3d(-1, 0, 1).normalize();
-//                                default -> {
-//                                    System.out.println("unhandled rail shape");
-//                                    return;
-//                                }
-//                            }
-
                             Vec3d offsetA = cartB.getPos().subtract(dirB.multiply(2.0));
                             cartA.setPosition(offsetA);
                         }
