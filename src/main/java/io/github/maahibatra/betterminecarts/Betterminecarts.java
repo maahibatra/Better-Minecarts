@@ -176,45 +176,70 @@ public class Betterminecarts implements ModInitializer {
                                 dir = dir.normalize();
 
                                 BlockState leaderRail = world.getBlockState(leaderBPos);
-                                Vec3d railAwareDir = dir;
+//                                Vec3d railAwareDir = dir;
+                                boolean corner = false;
 
                                 if(leaderRail.getBlock() instanceof AbstractRailBlock railBlock) {
                                     RailShape shape = leaderRail.get(railBlock.getShapeProperty());
-                                    Vec3d railDir;
+                                    corner = shape == RailShape.NORTH_EAST || shape == RailShape.NORTH_WEST || shape == RailShape.SOUTH_EAST || shape == RailShape.SOUTH_WEST;
 
-                                    switch (shape) {
-                                        case NORTH_SOUTH -> railDir = new Vec3d(0, 0, dir.z > 0 ? 1 : -1);
-                                        case EAST_WEST -> railDir = new Vec3d(dir.x > 0 ? 1 : -1, 0, 0);
-                                        case NORTH_EAST -> railDir = dir.x > 0 || dir.z < 0 ? new Vec3d(0.707, 0, -0.707) : new Vec3d(-0.707, 0, 0.707);
-                                        case NORTH_WEST -> railDir = dir.x < 0 || dir.z < 0 ? new Vec3d(-0.707, 0, -0.707) : new Vec3d(0.707, 0, 0.707);
-                                        case SOUTH_EAST -> railDir = dir.x > 0 || dir.z > 0 ? new Vec3d(0.707, 0, 0.707) : new Vec3d(-0.707, 0, -0.707);
-                                        case SOUTH_WEST -> railDir = dir.x < 0 || dir.z > 0 ? new Vec3d(-0.707, 0, 0.707) : new Vec3d(0.707, 0, -0.707);
-                                        case ASCENDING_NORTH -> railDir = new Vec3d(0, 0.5, -1).normalize();
-                                        case ASCENDING_SOUTH -> railDir = new Vec3d(0, 0.5, 1).normalize();
-                                        case ASCENDING_EAST -> railDir = new Vec3d(1, 0.5, 0).normalize();
-                                        case ASCENDING_WEST -> railDir = new Vec3d(-1, 0.5, 0).normalize();
-                                        default -> {
-                                            System.out.println("unhandled rail shape");
-                                            return;
-                                        }
-                                    }
+//                                    Vec3d railDir;
+//
+//                                    switch (shape) {
+//                                        case NORTH_SOUTH -> railDir = new Vec3d(0, 0, dir.z > 0 ? 1 : -1);
+//                                        case EAST_WEST -> railDir = new Vec3d(dir.x > 0 ? 1 : -1, 0, 0);
+//                                        case NORTH_EAST -> railDir = (dir.x > 0 && dir.z < 0) ? new Vec3d(0.707, 0, -0.707) : new Vec3d(-0.707, 0, 0.707);
+//                                        case NORTH_WEST -> railDir = (dir.x < 0 && dir.z < 0) ? new Vec3d(-0.707, 0, -0.707) : new Vec3d(0.707, 0, 0.707);
+//                                        case SOUTH_EAST -> railDir = (dir.x > 0 && dir.z > 0) ? new Vec3d(0.707, 0, 0.707) : new Vec3d(-0.707, 0, -0.707);
+//                                        case SOUTH_WEST -> railDir = (dir.x < 0 && dir.z > 0) ? new Vec3d(-0.707, 0, 0.707) : new Vec3d(0.707, 0, -0.707);
+//                                        case ASCENDING_NORTH -> railDir = new Vec3d(0, 0.5, -1).normalize();
+//                                        case ASCENDING_SOUTH -> railDir = new Vec3d(0, 0.5, 1).normalize();
+//                                        case ASCENDING_EAST -> railDir = new Vec3d(1, 0.5, 0).normalize();
+//                                        case ASCENDING_WEST -> railDir = new Vec3d(-1, 0.5, 0).normalize();
+//                                        default -> {
+//                                            System.out.println("unhandled rail shape");
+//                                            return;
+//                                        }
+//                                    }
+//
+//                                    if(railDir != null) {
+//                                        railAwareDir = railDir;
+//                                    }
+//                                }
 
-                                    if(railDir != null) {
-                                        railAwareDir = railDir;
-                                    }
+//                                Vec3d target = leaderPos.subtract(dir.multiply(2.0));
+//                                Vec3d adjustment = target.subtract(followerPos).multiply(0.5);
+//                                follower.setPosition(followerPos.add(adjustment));
                                 }
 
-                                Vec3d target = leaderPos.subtract(dir.multiply(2.0));
-                                Vec3d adjustment = target.subtract(followerPos).multiply(0.5);
-                                follower.setPosition(followerPos.add(adjustment));
+                                Vec3d target;
+                                if(corner && currDist > 1.8) {
+                                    target = leaderPos.subtract(dir.multiply(1.8));
+                                } else {
+                                    target = leaderPos.subtract(dir.multiply(2.0));
+                                }
+
+                                BlockPos targetPos = BlockPos.ofFloored(target);
+                                Block targetBlock = world.getBlockState(targetPos).getBlock();
+                                Block targetBlockBelow = world.getBlockState(targetPos.down()).getBlock();
+
+                                if(targetBlock instanceof AbstractRailBlock || targetBlockBelow instanceof AbstractRailBlock) {
+                                    double factor = corner ? 0.3 : 0.5;
+                                    Vec3d adjustment = target.subtract(followerPos).multiply(factor);
+                                    follower.setPosition(followerPos.add(adjustment));
+                                } else {
+                                    Vec3d smallTarget = leaderPos.subtract(dir.multiply(1.5));
+                                    Vec3d adjustment = smallTarget.subtract(followerPos).multiply(0.2);
+                                    follower.setPosition(followerPos.add(adjustment));
+                                }
                             }
                         }
 
-//                        // sync velocities
-//                        Vec3d leaderVel = leader.getVelocity();
-//                        if(leaderVel.length() > 0.01) {
-//                            follower.setVelocity(leaderVel);
-//                        }
+                        // sync velocities
+                        Vec3d leaderVel = leader.getVelocity();
+                        if(leaderVel.length() > 0.01) {
+                            follower.setVelocity(leaderVel);
+                        }
 
                         lastUpdateTimes.put(uuidA, currTime);
                         lastUpdateTimes.put(uuidActualB, currTime);
