@@ -37,11 +37,17 @@ public class Betterminecarts implements ModInitializer {
 
         UseEntityCallback.EVENT.register((playerEntity, world, hand, entity, entityHitResult) -> {
             if (!world.isClient() && entity instanceof AbstractMinecartEntity) {
-                if (playerEntity.getMainHandStack().getItem() != Items.CHAIN && entity instanceof MinecartEntity) {
+                boolean holdingChain = playerEntity.getMainHandStack().getItem() == Items.CHAIN;
+
+                if (!holdingChain && entity instanceof MinecartEntity) {
                     playerEntity.sendMessage(Text.literal("sitting in a minecart, i see!"), false);
                     if(entity.getPassengerList().isEmpty()) {
                         playerEntity.startRiding(entity);
                     }
+                    return ActionResult.SUCCESS;
+                }
+
+                if(!holdingChain) {
                     return ActionResult.SUCCESS;
                 }
 
@@ -55,13 +61,13 @@ public class Betterminecarts implements ModInitializer {
 
                 if(map.isEmpty()) {
                     playerEntity.sendMessage(Text.literal("you clicked the first minecart with a chain!"), false);
-                    map.put(playerEntity.getUuid(), (MinecartEntity) entity);
+                    map.put(playerEntity.getUuid(), (AbstractMinecartEntity) entity);
                 } else {
                     AbstractMinecartEntity storedCart = map.get(playerEntity.getUuid());
 
                     if (storedCart == null || !storedCart.isAlive() || storedCart.isRemoved() || storedCart == entity) {
                         playerEntity.sendMessage(Text.literal("the first minecart is invalid. this is your first minecart, now."), false);
-                        map.put(playerEntity.getUuid(), (MinecartEntity) entity);
+                        map.put(playerEntity.getUuid(), (AbstractMinecartEntity) entity);
                     } else {
                         BlockPos pos1 = storedCart.getBlockPos();
                         BlockPos pos2 = entity.getBlockPos();
@@ -107,7 +113,6 @@ public class Betterminecarts implements ModInitializer {
 
                 // looks up linked minecarts
                 UUID uuidA = cartA.getUuid();
-                if(processed.contains(uuidA)) continue;
                 Set<UUID> linkedUuids = linkMap.getOrDefault(uuidA, Collections.emptySet());
 
                 for(UUID uuidB : linkedUuids) { // iterates over linked carts
@@ -115,14 +120,14 @@ public class Betterminecarts implements ModInitializer {
                     if(!(linked instanceof AbstractMinecartEntity cartB)) continue;
                     UUID uuidActualB = cartB.getUuid();
 
-                    String pairId = uuidA.compareTo(uuidActualB) < 0 ? uuidA + "-" + uuidA+ "-"+ uuidActualB : uuidActualB + "-" + uuidA;
+                    String pairId = uuidA.compareTo(uuidActualB) < 0 ? uuidA + "-" + uuidActualB : uuidActualB + "-" + uuidA;
                     if(processed.contains(pairId)) continue;
                     processed.add(pairId);
 
-                    // skip if we alr processed the pair this tick
-                    Long lastUpdateA = lastUpdateTimes.get(uuidA);
-                    Long lastUpdateB = lastUpdateTimes.get(uuidActualB);
-                    if((lastUpdateA != null && lastUpdateA == currTime) || (lastUpdateB != null && lastUpdateB == currTime)) continue;
+//                    // skip if we alr processed the pair this tick
+//                    Long lastUpdateA = lastUpdateTimes.get(uuidA);
+//                    Long lastUpdateB = lastUpdateTimes.get(uuidActualB);
+//                    if((lastUpdateA != null && lastUpdateA == currTime) || (lastUpdateB != null && lastUpdateB == currTime)) continue;
 
                     // only process if both carts are on rails
                     BlockPos posA = cartA.getBlockPos();

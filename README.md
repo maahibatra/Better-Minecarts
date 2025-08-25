@@ -1,7 +1,8 @@
 # Better Minecarts
 
 This minecraft mod links up minecarts to form a train-like system!
-THIS IS STILL IN DEVELOPMENT AND KINDA BROKEN IN SOME WAYS!!
+
+THIS IS STILL IN DEVELOPMENT AND KINDA BROKEN IN SOME WAYS!! It is still a bit wonky when minecarts are pushed by player and go around a corner slowly :( Other than that should work on corners!
 
 ## How To Use
 
@@ -14,6 +15,10 @@ THIS IS STILL IN DEVELOPMENT AND KINDA BROKEN IN SOME WAYS!!
 
 - [x] Basic linked sync movement
 - [x] Fix corner derailing
-- [ ] Fix unlikability of more than two minecarts
-- [ ] Fix issue of being able to sit in furnace/chest/etc minecarts
+- [x] Fix unlikability of more than two minecarts
+- [x] Fix issue of being able to sit in furnace/chest/etc minecarts
 - [ ] Fix issue of being unable to use furnace/chest/etc minecarts
+- [ ] Fix leader carts going inside blocks on rail
+- [x] Fix unlinkability of chests to furnaces or other types
+- [ ] Cap the total train size
+- [ ] Minecarts remain linked even after leaving and rejoining game
