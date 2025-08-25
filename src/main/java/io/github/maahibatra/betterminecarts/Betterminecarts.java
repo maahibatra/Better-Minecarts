@@ -100,7 +100,8 @@ public class Betterminecarts implements ModInitializer {
 
         ServerTickEvents.END_WORLD_TICK.register(world -> {
             long currTime = world.getServer().getTicks();
-            Set<UUID> processed = new HashSet<>();
+            Set<String> processed = new HashSet<>();
+
             for(Entity entity : world.iterateEntities()) { // entity iteration
                 if(!(entity instanceof AbstractMinecartEntity cartA)) continue;
 
@@ -113,7 +114,10 @@ public class Betterminecarts implements ModInitializer {
                     Entity linked = world.getEntity(uuidB);
                     if(!(linked instanceof AbstractMinecartEntity cartB)) continue;
                     UUID uuidActualB = cartB.getUuid();
-                    if(processed.contains(uuidActualB)) continue;
+
+                    String pairId = uuidA.compareTo(uuidActualB) < 0 ? uuidA + "-" + uuidA+ "-"+ uuidActualB : uuidActualB + "-" + uuidA;
+                    if(processed.contains(pairId)) continue;
+                    processed.add(pairId);
 
                     // skip if we alr processed the pair this tick
                     Long lastUpdateA = lastUpdateTimes.get(uuidA);
@@ -167,6 +171,7 @@ public class Betterminecarts implements ModInitializer {
                             followerBPos = posA;
                         }
 
+                        // if a cart is near a corner or on a corner, ignore the forced sync
                         boolean nearCorner = false;
 
                         for(int dx = -1; dx <= 1; dx++) {
@@ -207,6 +212,7 @@ public class Betterminecarts implements ModInitializer {
                             Vec3d dir = leaderPos.subtract(followerPos);
                             double currDist = dir.length();
 
+                            // 2 block gap
                             if (Math.abs(currDist - 2.0) > 0.1) {
                                 if (currDist > 0.01) {
                                     dir = dir.normalize();
@@ -226,8 +232,6 @@ public class Betterminecarts implements ModInitializer {
 
                         lastUpdateTimes.put(uuidA, currTime);
                         lastUpdateTimes.put(uuidActualB, currTime);
-                        processed.add(uuidA);
-                        processed.add(uuidActualB);
                     }
 
                     lastPositions.put(uuidA, posVecA);
