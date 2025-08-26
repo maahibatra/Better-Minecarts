@@ -1,6 +1,7 @@
 package io.github.maahibatra.betterminecarts;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
@@ -9,9 +10,9 @@ import net.minecraft.block.*;
 import net.minecraft.block.enums.RailShape;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.vehicle.AbstractMinecartEntity;
-import net.minecraft.entity.vehicle.MinecartEntity;
+import net.minecraft.entity.vehicle.*;
 import net.minecraft.item.Items;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
@@ -35,20 +36,78 @@ public class Betterminecarts implements ModInitializer {
         HashMap<UUID, AbstractMinecartEntity> map = new HashMap<>();
         Set<List<UUID>> links = new HashSet<>();
 
-        UseEntityCallback.EVENT.register((playerEntity, world, hand, entity, entityHitResult) -> {
-            if (!world.isClient() && entity instanceof AbstractMinecartEntity) {
-                boolean holdingChain = playerEntity.getMainHandStack().getItem() == Items.CHAIN;
+        AttackEntityCallback.EVENT.register((playerEntity, world, hand, entity, entityHitResult) -> {
+            if(!world.isClient() && entity instanceof AbstractMinecartEntity && playerEntity.isSneaking()) {
+                UUID cartId = entity.getUuid();
+                Set<UUID> linkedCarts = linkMap.getOrDefault(cartId, Collections.emptySet());
 
-                if (!holdingChain && entity instanceof MinecartEntity) {
-                    playerEntity.sendMessage(Text.literal("sitting in a minecart, i see!"), false);
-                    if(entity.getPassengerList().isEmpty()) {
-                        playerEntity.startRiding(entity);
+                if(!linkedCarts.isEmpty()) {
+                    for(int i = 0; i < linkedCarts.size(); i++) {
+                        entity.dropStack((ServerWorld) world, Items.CHAIN.getDefaultStack());
                     }
+                    for(UUID linkedId : linkedCarts) {
+                        List<UUID> pair = Arrays.asList(cartId, linkedId);
+                        pair.sort(Comparator.naturalOrder());
+                        links.remove(pair);
+
+                        Set<UUID> otherLinks = linkMap.get(linkedId);
+                        if(otherLinks != null) {
+                            otherLinks.remove(cartId);
+                            if(otherLinks.isEmpty()) {
+                                linkMap.remove(linkedId);
+                            }
+                        }
+                    }
+                    linkMap.remove(cartId);
                     return ActionResult.SUCCESS;
                 }
+            }
+            return ActionResult.PASS;
+        });
 
-                if(!holdingChain) {
-                    return ActionResult.SUCCESS;
+        ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
+            if (!world.isClient() && entity instanceof AbstractMinecartEntity) {
+                UUID cartId = entity.getUuid();
+                Set<UUID> linkedCarts = linkMap.get(cartId);
+
+                if (linkedCarts != null && !linkedCarts.isEmpty()) {
+                    entity.dropStack((ServerWorld) world, Items.CHAIN.getDefaultStack());
+
+                    for (UUID linkedId : linkedCarts) {
+                        Set<UUID> otherLinks = linkMap.get(linkedId);
+                        if (otherLinks != null) {
+                            otherLinks.remove(cartId);
+                            if (otherLinks.isEmpty()) {
+                                linkMap.remove(linkedId);
+                            }
+                        }
+                    }
+
+                    linkMap.remove(cartId);
+                }
+            }
+        });
+
+        UseEntityCallback.EVENT.register((playerEntity, world, hand, entity, entityHitResult) -> {
+            if(world.isClient()) {
+                return ActionResult.SUCCESS;
+            }
+            if (entity instanceof AbstractMinecartEntity) {
+                boolean holdingChain = playerEntity.getMainHandStack().getItem() == Items.CHAIN;
+
+                if (!holdingChain) {
+                    if(entity instanceof MinecartEntity) {
+                        playerEntity.sendMessage(Text.literal("sitting in a minecart, i see!"), false);
+                        if (entity.getPassengerList().isEmpty()) {
+                            playerEntity.startRiding(entity);
+                        }
+                        return ActionResult.SUCCESS;
+                    }
+                    if(entity instanceof ChestMinecartEntity || entity instanceof FurnaceMinecartEntity || entity instanceof HopperMinecartEntity || entity instanceof TntMinecartEntity) {
+                        entity.interact(playerEntity, hand);
+                        return ActionResult.SUCCESS;
+                    }
+                    return ActionResult.PASS;
                 }
 
                 BlockPos pos = entity.getBlockPos();
@@ -123,11 +182,6 @@ public class Betterminecarts implements ModInitializer {
                     String pairId = uuidA.compareTo(uuidActualB) < 0 ? uuidA + "-" + uuidActualB : uuidActualB + "-" + uuidA;
                     if(processed.contains(pairId)) continue;
                     processed.add(pairId);
-
-//                    // skip if we alr processed the pair this tick
-//                    Long lastUpdateA = lastUpdateTimes.get(uuidA);
-//                    Long lastUpdateB = lastUpdateTimes.get(uuidActualB);
-//                    if((lastUpdateA != null && lastUpdateA == currTime) || (lastUpdateB != null && lastUpdateB == currTime)) continue;
 
                     // only process if both carts are on rails
                     BlockPos posA = cartA.getBlockPos();
