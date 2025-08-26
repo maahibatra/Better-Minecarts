@@ -1,6 +1,6 @@
 # Better Minecarts
 
-This minecraft mod links up minecarts to form a train-like system! You can link up to 8 minecarts in one train.
+This minecraft mod links up minecarts to form a train-like system.
 
 THIS IS STILL IN DEVELOPMENT AND KINDA BROKEN IN SOME WAYS!! It is still a bit wonky when minecarts are pushed by player and go around a corner slowly :( Other than that should work on corners!
 
