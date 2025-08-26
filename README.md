@@ -2,7 +2,7 @@
 
 This minecraft mod links up minecarts to form a train-like system.
 
-THIS IS STILL IN DEVELOPMENT AND KINDA BROKEN IN SOME WAYS!! It is still a bit wonky when minecarts are pushed by player and go around a corner slowly :( Other than that should work on corners!
+THIS IS STILL IN DEVELOPMENT AND KINDA BROKEN IN SOME WAYS!!
 
 ## How To Use
 
