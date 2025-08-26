@@ -5,19 +5,21 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
-import net.fabricmc.loader.impl.lib.sat4j.core.Vec;
 import net.minecraft.block.*;
 import net.minecraft.block.enums.RailShape;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.vehicle.*;
 import net.minecraft.item.Items;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.shape.VoxelShape;
 
 import java.util.*;
 
@@ -36,6 +38,7 @@ public class Betterminecarts implements ModInitializer {
         HashMap<UUID, AbstractMinecartEntity> map = new HashMap<>();
         Set<List<UUID>> links = new HashSet<>();
 
+        // sneak attack linked minecart to unlink
         AttackEntityCallback.EVENT.register((playerEntity, world, hand, entity, entityHitResult) -> {
             if(!world.isClient() && entity instanceof AbstractMinecartEntity && playerEntity.isSneaking()) {
                 UUID cartId = entity.getUuid();
@@ -65,6 +68,7 @@ public class Betterminecarts implements ModInitializer {
             return ActionResult.PASS;
         });
 
+        // break minecart to unlink
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
             if (!world.isClient() && entity instanceof AbstractMinecartEntity) {
                 UUID cartId = entity.getUuid();
@@ -150,7 +154,9 @@ public class Betterminecarts implements ModInitializer {
                         } else {
                             links.add(pair);
                             playerEntity.sendMessage(Text.literal("you clicked the second minecart and linked it!"), false);
-                            playerEntity.getMainHandStack().decrement(1);
+                            if(!playerEntity.isCreative()) {
+                                playerEntity.getMainHandStack().decrement(1);
+                            }
 
                             linkMap.computeIfAbsent(uuid1, k -> new HashSet<>()).add(uuid2);
                             linkMap.computeIfAbsent(uuid2, k -> new HashSet<>()).add(uuid1);
@@ -182,6 +188,59 @@ public class Betterminecarts implements ModInitializer {
                     String pairId = uuidA.compareTo(uuidActualB) < 0 ? uuidA + "-" + uuidActualB : uuidActualB + "-" + uuidA;
                     if(processed.contains(pairId)) continue;
                     processed.add(pairId);
+
+//                    // check for collisions
+//                    Set<UUID> train = new HashSet<>();
+//                    Queue<UUID> toVisit = new ArrayDeque<>();
+//                    toVisit.add(uuidA);
+//
+//                    while(!toVisit.isEmpty()) {
+//                        UUID current = toVisit.poll();
+//                        if(!train.add(current)) continue;
+//                        for(UUID neighbor : linkMap.getOrDefault(current, Collections.emptySet())) {
+//                            if(!train.contains(neighbor)) toVisit.add(neighbor);
+//                        }
+//                    }
+//
+//                    List<AbstractMinecartEntity> trainCarts = new ArrayList<>();
+//                    for(UUID uuid : train) {
+//                        Entity e = world.getEntity(uuid);
+//                        if(e instanceof AbstractMinecartEntity cart) {
+//                            trainCarts.add(cart);
+//                        }
+//                    }
+//
+//                    boolean collision = false;
+//                    for(AbstractMinecartEntity cart : trainCarts) {
+//                        Vec3d nextPos = cart.getPos().add(cart.getVelocity());
+//                        Box nextBox = cart.getBoundingBox().offset(nextPos.subtract(cart.getPos()));
+//
+//                        if(!world.isSpaceEmpty(cart, nextBox)) {
+//                            boolean collided = false;
+//
+//                            for(BlockPos bPos : BlockPos.iterate(MathHelper.floor(nextBox.minX), MathHelper.floor(nextBox.minY), MathHelper.floor(nextBox.minZ), MathHelper.floor(nextBox.maxX), MathHelper.floor(nextBox.maxY), MathHelper.floor(nextBox.maxZ))) {
+//                                BlockState state = world.getBlockState(bPos);
+//                                VoxelShape shape = state.getCollisionShape(world, bPos, ShapeContext.absent());
+//
+//                                if(!shape.isEmpty() && shape.getBoundingBox().offset(bPos).intersects(nextBox)) {
+//                                    collided = true;
+//                                    break;
+//                                }
+//
+//                                if(collided) {
+//                                    collision = true;
+//                                    break;
+//                                }
+//                            }
+//                        }
+//                    }
+//
+//                    if(collision) {
+//                        for(AbstractMinecartEntity cart : trainCarts) {
+//                            cart.setVelocityClient(0.0, 0.0, 0.0);
+//                        }
+//                        continue;
+//                    }
 
                     // only process if both carts are on rails
                     BlockPos posA = cartA.getBlockPos();

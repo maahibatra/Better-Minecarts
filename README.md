@@ -19,8 +19,9 @@ THIS IS STILL IN DEVELOPMENT AND KINDA BROKEN IN SOME WAYS!! It is still a bit w
 - [x] Fix unlikability of more than two minecarts
 - [x] Fix issue of being able to sit in furnace/chest/etc minecarts
 - [x] Fix issue of being unable to use furnace/chest/etc minecarts
-- [ ] Only decrease chain count from inventory when in survival, not creative
+- [x] Only decrease chain count from inventory when in survival, not creative
 - [ ] Fix leader carts going inside blocks on rail
+- [ ] When a minecart is derailed, it unlinks
 - [x] Fix unlinkability of chests to furnaces or other types
 - [ ] Cap the total train size
 - [ ] Minecarts remain linked even after leaving and rejoining game
