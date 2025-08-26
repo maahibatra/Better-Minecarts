@@ -12,6 +12,14 @@ THIS IS STILL IN DEVELOPMENT AND KINDA BROKEN IN SOME WAYS!! It is still a bit w
 - They will now move together!
 - If you wish to unlink a minecart, shift and attack the minecart once, giving you a chain and unlinking it. Alternatively, breaking (no shifting required) a linked minecart will also drop a chain and unlink it.
 
+## Features
+
+- Link minecarts with chains
+- Unlink minecarts by sneaking/attacking or unloading
+- Sync movement between linked minecarts
+- Limit links to 2 per cart, 1 block distance 
+- Disable syncing near corners
+
 ## To-Do
 
 - [x] Basic linked sync movement
